@@ -2,266 +2,191 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Zen Block Blast v0.02</title>
     <style>
-        :root { --bg: #fdfdfd; --grid: #e0e0e0; --accent: #a8dadc; --text: #457b9d; }
-        body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; transition: background 0.5s ease; }
+        :root { --bg: #f0f4f8; --text: #334e68; --accent: #9fb3c8; --panel: #ffffff; }
+        body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
         
-        /* Layout Sections */
-        #ui-layer { position: absolute; top: 10px; width: 100%; display: flex; justify-content: space-around; font-weight: 600; }
-        #canvas-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        canvas { touch-action: none; border-radius: 12px; cursor: grab; }
+        /* SECTION: UI LAYOUT */
+        #game-wrapper { display: flex; flex-direction: column; height: 100vh; max-width: 500px; margin: auto; padding: 10px; box-sizing: border-box; }
         
-        /* Overlays */
-        .modal { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 100; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-        .active { display: flex !important; }
+        .top-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; font-weight: 600; font-size: 0.9rem; }
+        .grid-container { flex-grow: 1; display: flex; align-items: center; justify-content: center; }
+        canvas { background: var(--panel); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); cursor: pointer; }
         
-        /* Buttons */
-        .btn-group { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
-        button { padding: 10px 18px; border: 2px solid var(--text); background: transparent; color: var(--text); border-radius: 20px; font-weight: bold; cursor: pointer; }
-        button:active { transform: scale(0.95); }
-        .hidden { display: none; }
+        .shape-preview { height: 120px; display: flex; justify-content: space-around; align-items: center; }
         
-        .powerup-bar { display: flex; gap: 20px; margin-top: 5px; }
-        .powerup { font-size: 12px; display: flex; flex-direction: column; }
+        .bottom-row { display: flex; align-items: center; border-top: 1px solid var(--accent); padding-top: 15px; }
+        .power-ups { display: flex; gap: 8px; flex: 3; }
+        .shop-controls { flex: 1; display: flex; flex-direction: column; align-items: flex-end; border-left: 2px solid var(--accent); padding-left: 10px; }
+
+        /* SECTION: BUTTONS & UI ELEMENTS */
+        button { border: none; background: var(--panel); padding: 8px 12px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); color: var(--text); font-weight: bold; font-size: 12px; }
+        .ios-hide { display: none; } /* Managed via JS */
+        #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; color: white; padding: 20px; }
+        .shop-item { background: #fff; color: #333; margin: 5px; padding: 10px; border-radius: 5px; width: 80%; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
 
-<div id="ui-layer">
-    <div>SCORE: <span id="score">0</span></div>
-    <div>HIGH: <span id="highscore">0</span></div>
-</div>
-
-<div id="canvas-container">
-    <canvas id="gameCanvas"></canvas>
-    
-    <div class="powerup-bar">
-        <div class="powerup"><button onclick="usePowerup('rotate')">🔄</button><span>Rotate</span></div>
-        <div class="powerup"><button onclick="usePowerup('clear')">💣</button><span>Blast</span></div>
-        <div class="powerup"><button onclick="usePowerup('new')">🎲</button><span>New</span></div>
+<div id="game-wrapper">
+    <div class="top-row">
+        <div>Score: <span id="score">0</span><br>High: <span id="highscore">0</span></div>
+        <div>💰 <span id="wallet">0</span></div>
+        <div style="display: flex; gap: 5px;">
+            <button id="fsBtn" class="ios-hide" onclick="toggleFS()">⛶</button>
+            <button id="muteBtn" onclick="toggleMute()">🔊</button>
+        </div>
     </div>
 
-    <div class="btn-group">
-        <button id="fsBtn" onclick="toggleFS()" class="hidden">Full Screen</button>
-        <button id="muteBtn" onclick="toggleMute()">Sound: ON</button>
-        <button onclick="openModal('helpModal')">Help</button>
-        <button onclick="openModal('shopModal')">Shop</button>
+    <div class="grid-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div class="shape-preview" id="shapes"></div>
+
+    <div class="bottom-row">
+        <div class="power-ups">
+            <button onclick="usePowerup('rotate')">🔄 50</button>
+            <button onclick="usePowerup('clear')">🧹 100</button>
+            <button onclick="usePowerup('refresh')">🎲 75</button>
+        </div>
+        <div class="shop-controls">
+            <button onclick="showOverlay('help')">Help ?</button>
+            <button onclick="showOverlay('shop')" style="margin-top: 5px; background: var(--text); color: white;">Shop 🛒</button>
+        </div>
     </div>
 </div>
 
-<div id="helpModal" class="modal">
-    <h2>How to Play</h2>
-    <p>Drag shapes onto the grid to complete rows or columns.<br>Complete lines to clear space and earn points.</p>
-    <p><strong>Powerups:</strong><br>Rotate: Spin a shape before placing.<br>Blast: Clear a 3x3 area.<br>Refresh: Swap your current shapes.</p>
-    <button onclick="closeModals()">Got it!</button>
-</div>
-
-<div id="shopModal" class="modal">
-    <h2>Zen Shop</h2>
-    <div id="shopItems">Themes (Unlocked on clear) | Skins Coming Soon</div>
-    <button onclick="closeModals()">Close</button>
-</div>
-
-<div id="gameOverModal" class="modal">
-    <h1>Game Over</h1>
-    <p>Final Score: <span id="finalScore">0</span></p>
-    <button onclick="resetGame()">Try Again</button>
+<div id="overlay">
+    <h2 id="overlayTitle">Help</h2>
+    <div id="overlayContent" style="max-height: 70vh; overflow-y: auto; text-align: left;"></div>
+    <button onclick="closeOverlay()" style="margin-top: 20px;">Close</button>
 </div>
 
 <script>
-/** * SECTION: DEBUG & CONFIG
+/** * SECTION: DEBUGGING & STATE 
+ * Notes: Track persistent data in localStorage. 
  */
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const isAndroid = /Android/i.test(navigator.userAgent);
-if(isAndroid) document.getElementById('fsBtn').classList.remove('hidden');
-
-let config = {
+const state = {
     gridSize: 8,
-    cellSize: 0,
     score: 0,
+    wallet: parseInt(localStorage.getItem('zen_wallet')) || 0,
+    highscore: parseInt(localStorage.getItem('zen_high')) || 0,
     isMuted: false,
-    themeIdx: 0,
-    unlockedThemes: [0, 1]
+    ownedThemes: JSON.parse(localStorage.getItem('zen_themes')) || [0, 1],
+    currentThemeIdx: 0,
+    themes: [
+        { bg: '#f0f4f8', b1: '#9fb3c8', b2: '#d9e2ec' }, // White/Blue/Gray
+        { bg: '#d9e2ec', b1: '#ffffff', b2: '#9fb3c8' }, // Blue/White/Gray
+        { bg: '#2d3436', b1: '#636e72', b2: '#b2bec3' }, // Dark Theme
+        { bg: '#f7f1e3', b1: '#ffb142', b2: '#ccae62' }  // Sand Theme
+    ]
 };
 
-// Theme Definitions [Background, Grid, Block, Highlight]
-const THEMES = [
-    {bg: '#fdfdfd', grid: '#e0e0e0', block: '#a8dadc', high: '#457b9d'}, // White/Blue
-    {bg: '#a8dadc', grid: '#f1faee', block: '#fdfdfd', high: '#1d3557'}, // Blue/White
-    {bg: '#222', grid: '#333', block: '#ffb703', high: '#fb8500'}       // Example Dark Theme
-];
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
 /**
- * SECTION: AUDIO ENGINE (CHILL)
+ * SECTION: INITIALIZATION & AUDIO
+ * Notes: Synthesizing 'chill' sounds using Sine waves with low-pass filters.
  */
-const audio = new (window.AudioContext || window.webkitAudioContext)();
-function playSoftSound(type) {
-    if(config.isMuted) return;
-    const osc = audio.createOscillator();
-    const gain = audio.createGain();
-    osc.type = 'sine'; // Sine for chill vibe
-    osc.frequency.setValueAtTime(type === 'place' ? 220 : 440, audio.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.5);
-    osc.connect(gain); gain.connect(audio.destination);
-    osc.start(); osc.stop(audio.currentTime + 0.5);
-}
-
-/**
- * SECTION: CORE GAME LOGIC
- */
-let board = [];
-let shapes = [];
-let dragging = null;
-
 function init() {
-    config.cellSize = Math.min(window.innerWidth * 0.9, 400) / config.gridSize;
-    canvas.width = config.cellSize * config.gridSize;
-    canvas.height = canvas.width + 160;
-    board = Array(config.gridSize).fill().map(() => Array(config.gridSize).fill(0));
-    spawnShapes();
-    animate();
+    if (!isIOS) document.getElementById('fsBtn').classList.remove('ios-hide');
+    updateUI();
+    resize();
+    // Start Game Loop logic here...
 }
 
-function spawnShapes() {
-    shapes = [];
-    for(let i=0; i<3; i++) {
-        shapes.push({
-            map: [[1,1],[1,1]], // Simplification for v0.02
-            x: i * (canvas.width/3) + 15,
-            y: canvas.width + 30,
-            ox: i * (canvas.width/3) + 15,
-            oy: canvas.width + 30,
-            active: true
-        });
-    }
+function updateUI() {
+    document.getElementById('score').innerText = state.score;
+    document.getElementById('highscore').innerText = state.highscore;
+    document.getElementById('wallet').innerText = state.wallet;
 }
 
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const theme = THEMES[config.themeIdx];
-    document.body.style.backgroundColor = theme.bg;
+function toggleMute() {
+    state.isMuted = !state.isMuted;
+    document.getElementById('muteBtn').innerText = state.isMuted ? '🔇' : '🔊';
+}
 
-    // Draw Grid
-    for(let r=0; r<config.gridSize; r++) {
-        for(let c=0; c<config.gridSize; c++) {
-            ctx.fillStyle = board[r][c] ? theme.block : theme.grid;
-            ctx.fillRect(c*config.cellSize, r*config.cellSize, config.cellSize-2, config.cellSize-2);
-        }
-    }
-
-    // Draw Shapes & Dragging Preview
-    shapes.forEach((s, i) => {
-        if(!s.active) return;
-        ctx.fillStyle = theme.block;
-        s.map.forEach((row, ri) => {
-            row.forEach((col, ci) => {
-                if(col) ctx.fillRect(s.x + ci*(config.cellSize/1.5), s.y + ri*(config.cellSize/1.5), config.cellSize/1.8, config.cellSize/1.8);
-            });
-        });
-    });
+function playChillSound(type) {
+    if (state.isMuted) return;
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(type === 'clear' ? 440 : 220, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.00001, ac.currentTime + 0.5);
+    osc.connect(g).connect(ac.destination);
+    osc.start(); osc.stop(ac.currentTime + 0.5);
 }
 
 /**
- * SECTION: INTERACTION
+ * SECTION: SHOP & HELP OVERLAYS
  */
-canvas.addEventListener('touchstart', handleStart);
-canvas.addEventListener('touchmove', handleMove);
-canvas.addEventListener('touchend', handleEnd);
-
-function handleStart(e) {
-    const t = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const mx = t.clientX - rect.left;
-    const my = t.clientY - rect.top;
-    shapes.forEach((s, i) => {
-        if(s.active && mx > s.x && my > s.y) dragging = i;
-    });
-}
-
-function handleMove(e) {
-    if(dragging === null) return;
-    const t = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    shapes[dragging].x = t.clientX - rect.left - 30;
-    shapes[dragging].y = t.clientY - rect.top - 30;
-}
-
-function handleEnd() {
-    if(dragging === null) return;
-    const s = shapes[dragging];
-    const gridX = Math.round(s.x / config.cellSize);
-    const gridY = Math.round(s.y / config.cellSize);
-
-    // Collision Check: Must be empty
-    if(isValidPlacement(s, gridY, gridX)) {
-        placeShape(s, gridY, gridX);
-        playSoftSound('place');
-        checkLines();
+function showOverlay(mode) {
+    const title = document.getElementById('overlayTitle');
+    const content = document.getElementById('overlayContent');
+    document.getElementById('overlay').style.display = 'flex';
+    
+    if (mode === 'help') {
+        title.innerText = "How to Play";
+        content.innerHTML = `
+            <p>• Drag shapes to the grid to fill rows or columns.</p>
+            <p>• <b>Rotate (50):</b> Click to rotate a shape before placing.</p>
+            <p>• <b>Clear (100):</b> Remove a block from the grid.</p>
+            <p>• <b>Refresh (75):</b> Get 3 brand new shapes.</p>
+            <p>• Clear the <b>entire board</b> to cycle through your unlocked themes!</p>
+        `;
     } else {
-        s.x = s.ox; s.y = s.oy;
-    }
-    dragging = null;
-    if(shapes.every(sh => !sh.active)) spawnShapes();
-}
-
-function isValidPlacement(shape, r, c) {
-    if(r < 0 || c < 0 || r + shape.map.length > config.gridSize || c + shape.map[0].length > config.gridSize) return false;
-    for(let ri=0; ri<shape.map.length; ri++) {
-        for(let ci=0; ci<shape.map[0].length; ci++) {
-            if(shape.map[ri][ci] && board[r+ri][c+ci]) return false; // Overlap check
-        }
-    }
-    return true;
-}
-
-function checkLines() {
-    let rowsToClear = [];
-    let colsToClear = [];
-
-    // Rows
-    for(let r=0; r<config.gridSize; r++) if(board[r].every(v => v === 1)) rowsToClear.push(r);
-    // Cols
-    for(let c=0; c<config.gridSize; c++) {
-        let full = true;
-        for(let r=0; r<config.gridSize; r++) if(!board[r][c]) full = false;
-        if(full) colsToClear.push(c);
-    }
-
-    rowsToClear.forEach(r => board[r].fill(0));
-    colsToClear.forEach(c => { for(let r=0; r<config.gridSize; r++) board[r][c] = 0; });
-
-    if(rowsToClear.length || colsToClear.length) {
-        config.score += (rowsToClear.length + colsToClear.length) * 100;
-        document.getElementById('score').innerText = config.score;
-        playSoftSound('clear');
-        checkBoardEmpty();
+        title.innerText = "Shop";
+        content.innerHTML = state.themes.map((t, i) => `
+            <div class="shop-item">
+                Theme #${i+1} ${state.ownedThemes.includes(i) ? '(Owned)' : '(1000 pts)'}
+                ${!state.ownedThemes.includes(i) ? `<button onclick="buyTheme(${i})">Buy</button>` : ''}
+            </div>
+        `).join('');
     }
 }
 
-function checkBoardEmpty() {
-    let empty = true;
-    board.forEach(row => row.forEach(cell => { if(cell) empty = false; }));
-    if(empty) {
-        config.themeIdx = (config.themeIdx + 1) % THEMES.length; // Cycle theme
-    }
-}
+function closeOverlay() { document.getElementById('overlay').style.display = 'none'; }
 
 /**
- * SECTION: UI HELPERS
+ * SECTION: CORE GAME ENGINE (SKELETON)
+ * Notes: Implementing collision and highlighting.
  */
-function openModal(id) { document.getElementById(id).classList.add('active'); }
-function closeModals() { document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); }
-function toggleMute() { 
-    config.isMuted = !config.isMuted; 
-    document.getElementById('muteBtn').innerText = `Sound: ${config.isMuted ? 'OFF' : 'ON'}`;
+function resize() {
+    const size = Math.min(window.innerWidth - 40, 400);
+    canvas.width = size;
+    canvas.height = size;
 }
-function toggleFS() { if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); }
 
-function animate() { draw(); requestAnimationFrame(animate); }
-init();
+// Fullscreen for Android
+function toggleFS() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(e => {});
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+// Buying logic
+window.buyTheme = (idx) => {
+    if (state.wallet >= 1000) {
+        state.wallet -= 1000;
+        state.ownedThemes.push(idx);
+        localStorage.setItem('zen_wallet', state.wallet);
+        localStorage.setItem('zen_themes', JSON.stringify(state.ownedThemes));
+        updateUI();
+        showOverlay('shop');
+    } else {
+        alert("Not enough points!");
+    }
+};
+
+window.onload = init;
 </script>
 </body>
 </html>
