@@ -45,18 +45,23 @@
 
 <div id="game-area">
     <canvas id="gridCanvas"></canvas>
-    <canvas id="previewCanvas" style="background:transparent; box-shadow:none;"></canvas>
+    <div id="shape-container">
+        <div class="shape-slot" id="slot-0"></div>
+        <div class="shape-slot" id="slot-1"></div>
+        <div class="shape-slot" id="slot-2"></div>
+    </div>
 </div>
 
 <footer>
     <div class="power-ups">
-        <button onclick="powerUp('rot')">🔄</button>
-        <button onclick="powerUp('clr')">🧹</button>
-        <button onclick="powerUp('new')">🎲</button>
+        <button onclick="powerUp('rot')">🔄 50</button>
+        <button onclick="powerUp('clr')">🧹 100</button>
+        <button onclick="powerUp('new')">🎲 75</button>
     </div>
-    <div class="divider"></div>
-    <div class="side-btns">
-        <button onclick="showPop('help')" style="font-size: 10px; padding: 4px 8px;">Help ?</button>
+    <div class="divider-wrapper">
+        <button onclick="showPop('help')" class="help-btn-floating">Help ?</button>
+    </div>
+    <div class="shop-wrapper">
         <button onclick="showPop('shop')" class="shop-btn">SHOP 🛒</button>
     </div>
 </footer>
@@ -64,7 +69,7 @@
 <div id="overlay">
     <h2 id="popTitle"></h2>
     <div id="popContent"></div>
-    <button onclick="closePop()" style="margin-top: 20px; width: 100%;">Close</button>
+    <button onclick="closePop()" style="margin-top: 20px; width: 100%; padding: 15px;">Return to Game</button>
 </div>
 
 <script>
