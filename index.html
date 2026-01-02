@@ -3,134 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Block Blast Clone</title>
+    <title>Block Blast Master</title>
     <style>
-        :root { --bg: #1a1a1a; --board: #333; --text: #fff; --accent: #4CAF50; }
-        [data-theme="classic"] { --bg: #2c3e50; --board: #34495e; --accent: #e74c3c; }
-        [data-theme="neon"] { --bg: #000; --board: #111; --accent: #0ff; }
-        
-        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
-        #game-container { width: 100%; max-width: 500px; padding: 10px; text-align: center; }
-        
-        .stats { display: flex; justify-content: space-between; width: 100%; padding: 10px; font-size: 1.2rem; }
-        
-        #grid { display: grid; gap: 4px; background: var(--board); padding: 10px; border-radius: 8px; margin: 20px auto; }
-        .cell { background: rgba(255,255,255,0.1); border-radius: 4px; aspect-ratio: 1; }
-        .cell.filled { transition: transform 0.2s; }
-
-        #pieces-area { display: flex; justify-content: space-around; height: 120px; margin-top: 20px; }
-        .piece-preview { transform: scale(0.6); cursor: grab; }
-
-        .btn-group { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
-        button { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; background: var(--accent); color: white; }
-        
-        #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; padding: 20px; border: 2px solid var(--accent); z-index: 100; width: 80%; }
-        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 90; }
+        :root { --bg: #121212; --panel: #1e1e1e; --text: #ffffff; --accent: #4caf50; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; overflow: hidden; touch-action: none; }
+        #ui-layer { position: absolute; width: 100%; padding: 10px; display: flex; justify-content: space-between; z-index: 10; pointer-events: none; }
+        .btn { pointer-events: auto; background: var(--panel); border: 1px solid var(--accent); color: white; padding: 8px; border-radius: 5px; cursor: pointer; }
+        #game-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        canvas { background: #2a2a2a; border-radius: 8px; max-width: 95vw; max-height: 70vh; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); padding: 20px; border-radius: 10px; z-index: 100; width: 80%; text-align: center; }
+        .active { display: block; }
+        #shapes-container { display: flex; gap: 10px; margin-top: 20px; height: 100px; }
     </style>
 </head>
-<body data-theme="classic">
+<body>
 
-<div id="game-container">
-    <div class="stats">
-        <div>Score: <span id="score">0</span></div>
-        <div>High: <span id="highscore">0</span></div>
-        <div>Points: <span id="points">0</span></div>
-    </div>
-
-    <div id="grid"></div>
-
-    <div id="pieces-area"></div>
-
-    <div class="btn-group">
-        <button onclick="toggleMute()">Mute</button>
-        <button onclick="toggleFullScreen()">Full Screen</button>
-        <button onclick="openHelp()">Help</button>
-        <button onclick="openShop()">Shop</button>
+<div id="ui-layer">
+    <div>Score: <span id="score">0</span> | Best: <span id="best">0</span></div>
+    <div>
+        <button class="btn" onclick="toggleHelp()">?</button>
+        <button class="btn" onclick="toggleMute()">🔊</button>
+        <button class="btn" id="fs-btn" onclick="goFullScreen()">⛶</button>
     </div>
 </div>
 
-<div id="overlay" class="overlay"></div>
-<div id="modal" class="modal">
-    <div id="modal-content"></div>
-    <br>
-    <button onclick="closeModal()">Close / Restart</button>
+<div id="game-container">
+    <canvas id="gameBoard"></canvas>
+    <div id="shapes-container"></div>
+</div>
+
+<div id="gameOver" class="modal">
+    <h1>Game Over!</h1>
+    <p>Score: <span id="finalScore">0</span></p>
+    <button class="btn" onclick="location.reload()">Retry</button>
+</div>
+
+<div id="helpModal" class="modal">
+    <h3>Store & Help</h3>
+    <p>Drag shapes to fill lines. Clear board to cycle themes.</p>
+    <button class="btn" onclick="buyPowerUp('bomb')">Bomb (500 pts)</button>
+    <button class="btn" onclick="buySkin('tetris')">Tetris Skin (1000 pts)</button>
+    <button class="btn" onclick="toggleHelp()">Close</button>
 </div>
 
 <script>
-    // Game State
-    let score = 0, highscore = localStorage.getItem('blockHigh') || 0;
-    let points = localStorage.getItem('blockPoints') || 0;
-    let boardSize = 8;
-    let muted = false;
-    let unlockedThemes = ['classic', 'dark'];
-    let currentThemeIdx = 0;
-
-    const grid = document.getElementById('grid');
+    const canvas = document.getElementById('gameBoard');
+    const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('score');
-    const highscoreEl = document.getElementById('highscore');
-    const pointsEl = document.getElementById('points');
+    const bestEl = document.getElementById('best');
+    
+    let config = { size: 8, cellSize: 40, score: 0, highscore: localStorage.getItem('blockHigh') || 0, muted: false };
+    let grid = [];
+    let themes = ['#2a2a2a', '#1a237e', '#311b92'];
+    let currentTheme = 0;
 
-    // Initialize Game
-    function init(size = 8) {
-        boardSize = size;
-        grid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
-        grid.innerHTML = '';
-        for(let i=0; i < size*size; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'cell';
-            cell.dataset.idx = i;
-            grid.appendChild(cell);
-        }
-        highscoreEl.innerText = highscore;
-        pointsEl.innerText = points;
-        spawnPieces();
+    // Audio Context for beeps (No external files needed)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(freq, type) {
+        if (config.muted) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.1);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     }
 
-    function spawnPieces() {
-        const area = document.getElementById('pieces-area');
-        area.innerHTML = '';
-        for(let i=0; i<3; i++) {
-            const piece = document.createElement('div');
-            piece.className = 'piece-preview';
-            piece.innerHTML = '▊▊<br>▊▊'; // Simplified for demo
-            piece.draggable = true;
-            area.appendChild(piece);
+    function initGrid() {
+        grid = Array(config.size).fill().map(() => Array(config.size).fill(0));
+        canvas.width = config.size * config.cellSize;
+        canvas.height = config.size * config.cellSize;
+        drawGrid();
+    }
+
+    function drawGrid() {
+        ctx.fillStyle = themes[currentTheme];
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        for (let r = 0; r < config.size; r++) {
+            for (let c = 0; c < config.size; c++) {
+                ctx.strokeStyle = "#444";
+                ctx.strokeRect(c * config.cellSize, r * config.cellSize, config.cellSize, config.cellSize);
+                if (grid[r][c]) {
+                    ctx.fillStyle = config.skin || '#4caf50';
+                    ctx.fillRect(c * config.cellSize + 2, r * config.cellSize + 2, config.cellSize - 4, config.cellSize - 4);
+                }
+            }
         }
     }
 
-    // Logic for clearing lines
     function checkLines() {
-        // Pseudo-code logic for GitHub compatibility
-        // Iterate rows/columns, if full, clear and points++
-        // If clear occurs: cycleTheme();
+        let linesCleared = 0;
+        // Logic for rows/cols removal...
+        // If lines cleared > 0, playSound(440, 'sine')
+        // cycleTheme() if board cleared
     }
 
-    function cycleTheme() {
-        currentThemeIdx = (currentThemeIdx + 1) % unlockedThemes.length;
-        document.body.setAttribute('data-theme', unlockedThemes[currentThemeIdx]);
+    function goFullScreen() {
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
     }
 
-    function toggleFullScreen() {
-        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-        else document.exitFullscreen();
-    }
+    function toggleMute() { config.muted = !config.muted; }
+    function toggleHelp() { document.getElementById('helpModal').classList.toggle('active'); }
 
-    function openHelp() {
-        showModal("<h3>How to Play</h3><p>Drag blocks to clear lines. Powerups: <br>1. Bomb: Clear 3x3 <br>2. Refresh: Get new pieces <br>3. Rotate: Turn a piece.</p>");
-    }
+    // Logic for Touch Dragging would go here...
+    
+    window.onload = () => {
+        bestEl.innerText = config.highscore;
+        initGrid();
+    };
 
-    function showModal(html) {
-        document.getElementById('modal-content').innerHTML = html;
-        document.getElementById('modal').style.display = 'block';
-        document.getElementById('overlay').style.display = 'block';
-    }
-
-    function closeModal() {
-        document.getElementById('modal').style.display = 'none';
-        document.getElementById('overlay').style.display = 'none';
-    }
-
-    window.onload = () => init(8);
 </script>
 </body>
 </html>
