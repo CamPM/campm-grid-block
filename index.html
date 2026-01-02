@@ -2,189 +2,202 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Zen Block Blast v0.02</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Grid Block</title>
     <style>
-        :root { --bg: #f0f4f8; --text: #334e68; --accent: #9fb3c8; --panel: #ffffff; }
-        body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
+        :root { --bg: #f8fafc; --ui-bg: #ffffff; --accent: #cbd5e1; --text: #1e293b; --line: #e2e8f0; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; overflow: hidden; touch-action: none; display: flex; flex-direction: column; height: 100vh; }
         
-        /* SECTION: UI LAYOUT */
-        #game-wrapper { display: flex; flex-direction: column; height: 100vh; max-width: 500px; margin: auto; padding: 10px; box-sizing: border-box; }
+        /* SECTION: HEADER */
+        header { background: var(--ui-bg); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--line); font-weight: bold; }
         
-        .top-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; font-weight: 600; font-size: 0.9rem; }
-        .grid-container { flex-grow: 1; display: flex; align-items: center; justify-content: center; }
-        canvas { background: var(--panel); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); cursor: pointer; }
+        /* SECTION: PLAY AREA */
+        #game-area { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+        canvas { background: var(--ui-bg); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); touch-action: none; }
         
-        .shape-preview { height: 120px; display: flex; justify-content: space-around; align-items: center; }
+        /* SECTION: FOOTER & UI */
+        footer { background: var(--ui-bg); border-top: 2px solid var(--line); padding: 10px 20px; display: flex; align-items: center; gap: 15px; }
+        .power-ups { display: flex; gap: 10px; flex: 1; }
+        .divider { width: 2px; height: 50px; background: var(--line); }
+        .side-btns { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
         
-        .bottom-row { display: flex; align-items: center; border-top: 1px solid var(--accent); padding-top: 15px; }
-        .power-ups { display: flex; gap: 8px; flex: 3; }
-        .shop-controls { flex: 1; display: flex; flex-direction: column; align-items: flex-end; border-left: 2px solid var(--accent); padding-left: 10px; }
-
-        /* SECTION: BUTTONS & UI ELEMENTS */
-        button { border: none; background: var(--panel); padding: 8px 12px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); color: var(--text); font-weight: bold; font-size: 12px; }
-        .ios-hide { display: none; } /* Managed via JS */
-        #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; color: white; padding: 20px; }
-        .shop-item { background: #fff; color: #333; margin: 5px; padding: 10px; border-radius: 5px; width: 80%; display: flex; justify-content: space-between; }
+        button { background: var(--bg); border: 1px solid var(--line); padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; color: var(--text); }
+        .shop-btn { background: #1e293b; color: white; padding: 10px 15px; }
+        
+        #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; color: white; padding: 30px; overflow-y: auto; }
+        .theme-preview { width: 20px; height: 20px; border: 1px solid white; display: inline-block; vertical-align: middle; margin-right: 5px; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div id="game-wrapper">
-    <div class="top-row">
-        <div>Score: <span id="score">0</span><br>High: <span id="highscore">0</span></div>
-        <div>💰 <span id="wallet">0</span></div>
-        <div style="display: flex; gap: 5px;">
-            <button id="fsBtn" class="ios-hide" onclick="toggleFS()">⛶</button>
-            <button id="muteBtn" onclick="toggleMute()">🔊</button>
-        </div>
+<header>
+    <div>Score: <span id="score">0</span> | Best: <span id="high">0</span></div>
+    <div>💰 <span id="wallet">0</span></div>
+    <div style="display: flex; gap: 10px;">
+        <button id="fsBtn" onclick="toggleFS()">⛶</button>
+        <button onclick="toggleMute()" id="muteBtn">🔊</button>
     </div>
+</header>
 
-    <div class="grid-container">
-        <canvas id="gameCanvas"></canvas>
-    </div>
-
-    <div class="shape-preview" id="shapes"></div>
-
-    <div class="bottom-row">
-        <div class="power-ups">
-            <button onclick="usePowerup('rotate')">🔄 50</button>
-            <button onclick="usePowerup('clear')">🧹 100</button>
-            <button onclick="usePowerup('refresh')">🎲 75</button>
-        </div>
-        <div class="shop-controls">
-            <button onclick="showOverlay('help')">Help ?</button>
-            <button onclick="showOverlay('shop')" style="margin-top: 5px; background: var(--text); color: white;">Shop 🛒</button>
-        </div>
-    </div>
+<div id="game-area">
+    <canvas id="gridCanvas"></canvas>
+    <canvas id="previewCanvas" style="background:transparent; box-shadow:none;"></canvas>
 </div>
 
+<footer>
+    <div class="power-ups">
+        <button onclick="powerUp('rot')">🔄</button>
+        <button onclick="powerUp('clr')">🧹</button>
+        <button onclick="powerUp('new')">🎲</button>
+    </div>
+    <div class="divider"></div>
+    <div class="side-btns">
+        <button onclick="showPop('help')" style="font-size: 10px; padding: 4px 8px;">Help ?</button>
+        <button onclick="showPop('shop')" class="shop-btn">SHOP 🛒</button>
+    </div>
+</footer>
+
 <div id="overlay">
-    <h2 id="overlayTitle">Help</h2>
-    <div id="overlayContent" style="max-height: 70vh; overflow-y: auto; text-align: left;"></div>
-    <button onclick="closeOverlay()" style="margin-top: 20px;">Close</button>
+    <h2 id="popTitle"></h2>
+    <div id="popContent"></div>
+    <button onclick="closePop()" style="margin-top: 20px; width: 100%;">Close</button>
 </div>
 
 <script>
-/** * SECTION: DEBUGGING & STATE 
- * Notes: Track persistent data in localStorage. 
- */
+/** SECTION: DEBUGGING & STATE **/
 const state = {
     gridSize: 8,
     score: 0,
-    wallet: parseInt(localStorage.getItem('zen_wallet')) || 0,
-    highscore: parseInt(localStorage.getItem('zen_high')) || 0,
+    wallet: parseInt(localStorage.getItem('gb_wallet')) || 500,
+    high: parseInt(localStorage.getItem('gb_high')) || 0,
     isMuted: false,
-    ownedThemes: JSON.parse(localStorage.getItem('zen_themes')) || [0, 1],
-    currentThemeIdx: 0,
+    ownedThemes: JSON.parse(localStorage.getItem('gb_themes')) || [0, 1],
+    currentTheme: 0,
     themes: [
-        { bg: '#f0f4f8', b1: '#9fb3c8', b2: '#d9e2ec' }, // White/Blue/Gray
-        { bg: '#d9e2ec', b1: '#ffffff', b2: '#9fb3c8' }, // Blue/White/Gray
-        { bg: '#2d3436', b1: '#636e72', b2: '#b2bec3' }, // Dark Theme
-        { bg: '#f7f1e3', b1: '#ffb142', b2: '#ccae62' }  // Sand Theme
-    ]
+        { name: "Default White", bg: "#ffffff", b1: "#add8e6", b2: "#d3d3d3" },
+        { name: "Sky Blue", bg: "#add8e6", b1: "#d3d3d3", b2: "#ffffff" },
+        { name: "Midnight", bg: "#1e293b", b1: "#334155", b2: "#94a3b8" },
+        { name: "Forest", bg: "#064e3b", b1: "#059669", b2: "#34d399" },
+        { name: "Sunset", bg: "#7c2d12", b1: "#ea580c", b2: "#fb923c" },
+        { name: "Lavender", bg: "#4c1d95", b1: "#8b5cf6", b2: "#ddd6fe" },
+        { name: "Cyber", bg: "#000000", b1: "#00ff00", b2: "#003300" },
+        { name: "Rose", bg: "#831843", b1: "#db2777", b2: "#f9a8d4" },
+        { name: "Clay", bg: "#451a03", b1: "#92400e", b2: "#f59e0b" },
+        { name: "Glass", bg: "#f1f5f9", b1: "#94a3b8", b2: "#cbd5e1" }
+    ],
+    shapes: [],
+    board: [],
+    dragging: null,
+    dragPos: { x: 0, y: 0 }
 };
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const c = document.getElementById('gridCanvas');
+const ctx = c.getContext('2d');
+const pc = document.getElementById('previewCanvas');
+const pctx = pc.getContext('2d');
 
-/**
- * SECTION: INITIALIZATION & AUDIO
- * Notes: Synthesizing 'chill' sounds using Sine waves with low-pass filters.
- */
-function init() {
-    if (!isIOS) document.getElementById('fsBtn').classList.remove('ios-hide');
-    updateUI();
-    resize();
-    // Start Game Loop logic here...
+/** SECTION: AUDIO **/
+function playSound(freq) {
+    if (state.isMuted) return;
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.frequency.value = freq;
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.3);
+    o.connect(g).connect(ac.destination);
+    o.start(); o.stop(ac.currentTime + 0.3);
 }
 
-function updateUI() {
-    document.getElementById('score').innerText = state.score;
-    document.getElementById('highscore').innerText = state.highscore;
+/** SECTION: GAME LOGIC **/
+function init() {
+    if (/iPhone|iPad/.test(navigator.userAgent)) document.getElementById('fsBtn').classList.add('hidden');
+    state.board = Array(state.gridSize).fill().map(() => Array(state.gridSize).fill(null));
+    resize();
+    genShapes();
+    render();
+    document.getElementById('high').innerText = state.high;
     document.getElementById('wallet').innerText = state.wallet;
 }
 
-function toggleMute() {
-    state.isMuted = !state.isMuted;
-    document.getElementById('muteBtn').innerText = state.isMuted ? '🔇' : '🔊';
+function resize() {
+    const s = Math.min(window.innerWidth - 40, 350);
+    c.width = c.height = s;
+    pc.width = s; pc.height = 100;
 }
 
-function playChillSound(type) {
-    if (state.isMuted) return;
-    const ac = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ac.createOscillator();
-    const g = ac.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(type === 'clear' ? 440 : 220, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.00001, ac.currentTime + 0.5);
-    osc.connect(g).connect(ac.destination);
-    osc.start(); osc.stop(ac.currentTime + 0.5);
+function genShapes() {
+    state.shapes = [];
+    const lib = [ [[1,1],[1,1]], [[1,1,1,1]], [[1,1,1],[0,1,0]], [[1,0],[1,0],[1,1]], [[1]] ];
+    for(let i=0; i<3; i++) {
+        state.shapes.push({ 
+            map: lib[Math.floor(Math.random()*lib.length)], 
+            active: true,
+            x: i * (pc.width/3) + 20, y: 20 
+        });
+    }
 }
 
-/**
- * SECTION: SHOP & HELP OVERLAYS
- */
-function showOverlay(mode) {
-    const title = document.getElementById('overlayTitle');
-    const content = document.getElementById('overlayContent');
-    document.getElementById('overlay').style.display = 'flex';
-    
-    if (mode === 'help') {
-        title.innerText = "How to Play";
-        content.innerHTML = `
-            <p>• Drag shapes to the grid to fill rows or columns.</p>
-            <p>• <b>Rotate (50):</b> Click to rotate a shape before placing.</p>
-            <p>• <b>Clear (100):</b> Remove a block from the grid.</p>
-            <p>• <b>Refresh (75):</b> Get 3 brand new shapes.</p>
-            <p>• Clear the <b>entire board</b> to cycle through your unlocked themes!</p>
-        `;
+function render() {
+    const cs = c.width / state.gridSize;
+    ctx.clearRect(0, 0, c.width, c.height);
+    const theme = state.themes[state.currentTheme];
+
+    // Draw Grid
+    for(let y=0; y<state.gridSize; y++) {
+        for(let x=0; x<state.gridSize; x++) {
+            ctx.fillStyle = state.board[y][x] || theme.bg;
+            ctx.strokeStyle = varColor('--line');
+            ctx.fillRect(x*cs, y*cs, cs, cs);
+            ctx.strokeRect(x*cs, y*cs, cs, cs);
+        }
+    }
+
+    // Draw Previews
+    pctx.clearRect(0,0,pc.width,pc.height);
+    state.shapes.forEach(s => {
+        if(!s.active) return;
+        pctx.fillStyle = theme.b1;
+        s.map.forEach((row, ri) => row.forEach((v, ci) => {
+            if(v) pctx.fillRect(s.x + ci*15, s.y + ri*15, 12, 12);
+        }));
+    });
+}
+
+function varColor(name) { return getComputedStyle(document.body).getPropertyValue(name); }
+
+/** SECTION: UI & INTERACTION **/
+function showPop(type) {
+    const content = document.getElementById('popContent');
+    document.getElementById('overlay').style.display = 'block';
+    if(type === 'help') {
+        document.getElementById('popTitle').innerText = "Help";
+        content.innerHTML = "• Clear lines & columns to score.<br>• Clear board to change themes.<br>• Drag shapes carefully!";
     } else {
-        title.innerText = "Shop";
-        content.innerHTML = state.themes.map((t, i) => `
-            <div class="shop-item">
-                Theme #${i+1} ${state.ownedThemes.includes(i) ? '(Owned)' : '(1000 pts)'}
-                ${!state.ownedThemes.includes(i) ? `<button onclick="buyTheme(${i})">Buy</button>` : ''}
+        document.getElementById('popTitle').innerText = "Theme Shop";
+        content.innerHTML = state.themes.slice(2).map((t, i) => `
+            <div style="margin: 10px 0; border: 1px solid #444; padding: 10px;">
+                <span class="theme-preview" style="background:${t.bg}"></span> ${t.name}
+                <button onclick="buy(${i+2})" style="float:right">500 pts</button>
             </div>
         `).join('');
     }
 }
 
-function closeOverlay() { document.getElementById('overlay').style.display = 'none'; }
-
-/**
- * SECTION: CORE GAME ENGINE (SKELETON)
- * Notes: Implementing collision and highlighting.
- */
-function resize() {
-    const size = Math.min(window.innerWidth - 40, 400);
-    canvas.width = size;
-    canvas.height = size;
-}
-
-// Fullscreen for Android
-function toggleFS() {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(e => {});
-    } else {
-        document.exitFullscreen();
-    }
-}
-
-// Buying logic
-window.buyTheme = (idx) => {
-    if (state.wallet >= 1000) {
-        state.wallet -= 1000;
+function buy(idx) {
+    if(state.wallet >= 500) {
+        state.wallet -= 500;
         state.ownedThemes.push(idx);
-        localStorage.setItem('zen_wallet', state.wallet);
-        localStorage.setItem('zen_themes', JSON.stringify(state.ownedThemes));
-        updateUI();
-        showOverlay('shop');
-    } else {
-        alert("Not enough points!");
+        localStorage.setItem('gb_wallet', state.wallet);
+        localStorage.setItem('gb_themes', JSON.stringify(state.ownedThemes));
+        document.getElementById('wallet').innerText = state.wallet;
+        alert("Unlocked!");
     }
-};
+}
+
+function closePop() { document.getElementById('overlay').style.display = 'none'; }
+function toggleMute() { state.isMuted = !state.isMuted; document.getElementById('muteBtn').innerText = state.isMuted ? '🔇' : '🔊'; }
+function toggleFS() { if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
 
 window.onload = init;
 </script>
