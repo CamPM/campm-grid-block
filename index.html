@@ -7,25 +7,28 @@
     <style>
         :root { --bg: #f8fafc; --ui-bg: #ffffff; --accent: #cbd5e1; --text: #1e293b; --line: #e2e8f0; }
         body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; overflow: hidden; touch-action: none; display: flex; flex-direction: column; height: 100vh; }
-        
-        /* SECTION: HEADER */
-        header { background: var(--ui-bg); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--line); font-weight: bold; }
-        
-        /* SECTION: PLAY AREA */
-        #game-area { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+
+        header { background: var(--ui-bg); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--line); font-weight: bold; z-index: 10; }
+
+        #game-area { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; padding: 10px; }
         canvas { background: var(--ui-bg); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); touch-action: none; }
-        
-        /* SECTION: FOOTER & UI */
-        footer { background: var(--ui-bg); border-top: 2px solid var(--line); padding: 10px 20px; display: flex; align-items: center; gap: 15px; }
-        .power-ups { display: flex; gap: 10px; flex: 1; }
-        .divider { width: 2px; height: 50px; background: var(--line); }
-        .side-btns { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-        
-        button { background: var(--bg); border: 1px solid var(--line); padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; color: var(--text); }
+
+        /* The 1x3 Shape Grid */
+        #shape-container { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; max-width: 400px; height: 120px; gap: 10px; }
+        .shape-slot { background: rgba(0,0,0,0.02); border-radius: 8px; position: relative; display: flex; align-items: center; justify-content: center; }
+
+        footer { background: var(--ui-bg); border-top: 2px solid var(--line); padding: 10px 20px; display: flex; align-items: center; height: 80px; }
+        .power-ups { display: flex; gap: 10px; flex: 2; }
+
+        /* Vertical Divider & Help Position */
+        .divider-wrapper { position: relative; width: 2px; height: 50px; background: var(--line); margin: 0 15px; }
+        .help-btn-floating { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 10px; padding: 2px 6px; white-space: nowrap; }
+
+        .shop-wrapper { flex: 1; display: flex; justify-content: flex-end; }
+        button { background: var(--bg); border: 1px solid var(--line); padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .shop-btn { background: #1e293b; color: white; padding: 10px 15px; }
-        
-        #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; color: white; padding: 30px; overflow-y: auto; }
-        .theme-preview { width: 20px; height: 20px; border: 1px solid white; display: inline-block; vertical-align: middle; margin-right: 5px; }
+
+        #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; color: white; padding: 30px; overflow-y: auto; }
         .hidden { display: none; }
     </style>
 </head>
